@@ -1,0 +1,36 @@
+---
+title: "Project"
+author: "Thomas"
+date: "2022-09-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+This is our project for team 2, Flight Experience. The data contains information over 129,880 people who flew on different airplanes (with the same airline company though) and describes their plane ride experience. They rate their overall experience (from a scale of 1 to 5) over a lot of different variables. There are also two columns that include data over their departure delay and arrival delay time. It's a classification problem, and we will look at the variables that make the best ride for a passenger and determine if they would have categorized their ride as 'satisfied' or ' 'unsatisfied' depending on their self-report. 
+
+
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+
+
+```{r}
+flight_df <- read.csv("Flight_Experience.csv") %>% data.frame()
+head(flight_df)
+
+```
+
+```{r}
+
+ggplot(data = flight_df, aes(x = Gender, fill = Class)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() 
+
+```
+
