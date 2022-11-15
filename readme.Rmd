@@ -42,10 +42,66 @@ head(flight_df)
 
 ```
 
+
+
+Cleaning the data
+```{r}
+
+flight_df %>% summarize_all(function(x) sum(is.na(x)))
+
+```
+There are NA's in the dataset so lets clean it. Only column that has blanks is Arrival.Delay.in.Minutes
+
+
+
+```{r}
+flight_df[is.na(flight_df)] <- 0
+```
+Now there are no more NA's
+
+
+
+Let's create some categoircal variables for age
+```{r}
+
+min(flight_df$Age)
+max(flight_df$Age)
+
+
+```
+
+
+```{r}
+
+m <- function(x){
+  
+  mean(x, rm.na = T)
+  
+}
+average <- flight_df %>% group_by(Class) %>% select_if(is.numeric) %>% summarize_all(m) %>% select(-Flight.Distance)
+average
+
+
+tidy_average <- average %>% pivot_longer(cols=c('Age':'Arrival.Delay.in.Minutes'), names_to = 'flight_variable', values_to = 'average')
+tidy_average
+
+tidy_average %>%  ggplot(aes(x = Class, y = average, fill = Class)) + geom_bar(stat = "identity") + facet_wrap(~flight_variable) 
+
+#Add errors
+
+```
+
+
+
 ```{r}
 #First Viz
 ggplot(data = flight_df, aes(x = Gender, fill = Class)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() 
 
 ```
 
+
+
+```{r}
+flight_df %>% group_by(Class) %>% summarize(Average_distance = mean(Flight.Distance))%>% ggplot(aes(x = Class, y = Average_distance)) + geom_bar(stat = "identity") +  geom_text(stat="identity", aes(label=Average_distance), vjust=-0.2) + theme_bw()
+```
 
