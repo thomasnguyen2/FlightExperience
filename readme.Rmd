@@ -22,7 +22,7 @@ These are all the column names:
  [1] "satisfaction"                      "Gender"                            "Customer.Type"                     "Age"                              
  [5] "Type.of.Travel"                    "Class"                             "Flight.Distance"                   "Seat.comfort"                     
  [9] "Departure.Arrival.time.convenient" "Food.and.drink"                    "Gate.location"                     "Inflight.wifi.service"            
-[13] "Inflight.entertainment"            "Online.support"                    "Ease.of.Online.booking"            "On.board.service"                 
+[13] "Inflight.entertainment"            "Online.support, "                    "Ease.of.Online.booking"            "On.board.service"                 
 [17] "Leg.room.service"                  "Baggage.handling"                  "Checkin.service"                   "Cleanliness"                      
 [21] "Online.boarding"                   "Departure.Delay.in.Minutes"        "Arrival.Delay.in.Minutes"  
 
@@ -32,76 +32,439 @@ These are all the column names:
 ```{r}
 library(ggplot2)
 library(tidyverse)
+library(cluster)
+library(vtable)
 ```
 
 
-
+Reading in the excel file
 ```{r}
 flight_df <- read.csv("Flight_Experience.csv") %>% data.frame()
 head(flight_df)
+```
 
+Getting column information
+```{r}
+flight_df %>% glimpse()
 ```
 
 
-
-Cleaning the data
+Determining how many nulls there are
 ```{r}
 
-flight_df %>% summarize_all(function(x) sum(is.na(x)))
-
+nulls <- flight_df %>% summarize_all(function(x) sum(is.na(x)))
+t(nulls)
 ```
 There are NA's in the dataset so lets clean it. Only column that has blanks is Arrival.Delay.in.Minutes
 
 
-
+Let's create a summary statstics table
 ```{r}
-flight_df[is.na(flight_df)] <- 0
-```
-Now there are no more NA's
-
-
-
-Let's create some categoircal variables for age
-```{r}
-
-min(flight_df$Age)
-max(flight_df$Age)
-
-
+num <- flight_df %>% select(where(is.numeric)) 
+st(num)
 ```
 
 
+Let's determine the overall satisfaction of the passengers
 ```{r}
 
+flight_df %>% ggplot(aes(x = satisfaction, fill = satisfaction)) + geom_bar(position="stack", stat="count") + geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + ggtitle("Overall Satisfaction Count")
+
+```
+```{r, fig.height=8, fig.width= 8}
+df <- flight_df %>% select_if(is.numeric) %>% na.omit()
+cormat <- df %>% cor()
+
+
+cormat %>% as.data.frame %>% rownames_to_column("var1")
+
+
+tidycor <- cormat %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+
+  
+tidycor %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 2)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between all Rating Variables")
+```
+
+
+Correlation map between satisfaction and rating variables
+```{r,fig.height=8, fig.width= 8}
+
+flight_df_numeric <- flight_df %>% mutate(satisfy = ifelse(satisfaction == "satisfied", 1, 0))
+
+
+
+
+
+df2 <- flight_df_numeric %>% select_if(is.numeric) %>% na.omit()
+cormat2 <- df2 %>% cor()
+
+
+cormat2 %>% as.data.frame %>% rownames_to_column("var1")
+
+
+tidycor2 <- cormat2 %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+#Get every column except column 1
+  
+tidycor2 <- tidycor2 %>% filter(var2 == "satisfy")
+
+tidycor2 %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 2)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between Satisfaction and Rating Variables")
+```
+
+
+
+Creating correlation map of all the demographic/independent variables
+```{r, fig.height=5, fig.width= 5}
+
+
+
+flight_df_independent <- flight_df %>% mutate(satisfy = ifelse(satisfaction == "satisfied", 1, 0), gender = ifelse(Gender == "Male", 0, 1), customer.type = ifelse(Customer.Type == "Loyal Customer", 1, 0), travel.type = ifelse(Type.of.Travel == "Personal Travel", 0, 1), class = ifelse(Class == "Eco", 0, ifelse(Class == "Business", 2, 1)))
+
+flight_df_independent <- flight_df_independent %>% select(satisfy, gender, customer.type, travel.type, class)
+
+df3 <- flight_df_independent %>% select_if(is.numeric) %>% na.omit()
+cormat3 <- df3 %>% cor()
+
+
+cormat3 %>% as.data.frame %>% rownames_to_column("var1")
+
+
+tidycor3 <- cormat3 %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+#Get every column except column 1
+  
+
+tidycor3 %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 4)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between Demographic Variables")
+
+#male 0, female 1
+#business 2, eco plus 1, eco 0
+#personal 0, business travel 1
+#loyal 1, disloyal 0
+#satisfy 1, disatisfy 0
+
+
+```
+
+
+
+Looking at all the numeric variables and their average rating to satisfaction
+```{r}
 m <- function(x){
   
   mean(x, rm.na = T)
   
 }
-average <- flight_df %>% group_by(Class) %>% select_if(is.numeric) %>% summarize_all(m) %>% select(-Flight.Distance)
-average
+average <- flight_df %>% group_by(satisfaction) %>% select_if(is.numeric) %>% summarize_all(m) %>% select(-Flight.Distance)
+#average
 
 
-tidy_average <- average %>% pivot_longer(cols=c('Age':'Arrival.Delay.in.Minutes'), names_to = 'flight_variable', values_to = 'average')
-tidy_average
+tidy_average <- average %>% pivot_longer(cols=c('Seat.comfort':'Online.boarding'), names_to = 'flight_variable', values_to = 'average')
+#tidy_average
 
-tidy_average %>%  ggplot(aes(x = Class, y = average, fill = Class)) + geom_bar(stat = "identity") + facet_wrap(~flight_variable) 
+tidy_average %>%  ggplot(aes(x = satisfaction, y = average, fill = satisfaction)) + geom_bar(stat = "identity") + facet_wrap(~flight_variable) + ggtitle("Rating Variables by Satisfaction")
 
-#Add errors
+difference_df <- tidy_average %>% select(flight_variable, satisfaction, average) %>% arrange(flight_variable, average) %>% mutate(diff=average-lag(average,default=first(average))) %>% mutate(difference = ifelse(diff <= 0, "-", diff)) %>% select(-diff)
+
+
+difference_df %>% filter(difference != "-") %>% ggplot(aes(x = flight_variable, y=difference, color = satisfaction)) + geom_point()  + geom_segment(aes(x=flight_variable, xend=flight_variable, y=0, yend=difference)) + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle("Difference in Satisfaction Average")
+
+```
+
+
+
+By gender
+
+```{r}
+
+ggplot(data = flight_df, aes(x = Gender, fill = satisfaction)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() + ggtitle("Satisfaction by Gender")
+
+```
+
+By customer type
+```{r}
+ggplot(data = flight_df, aes(x = Customer.Type, fill = satisfaction)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() + ggtitle("Satisfaction by Customer Type")
+
+```
+
+By type of travel
+```{r}
+
+ggplot(data = flight_df, aes(x = Type.of.Travel , fill = satisfaction)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() + ggtitle("Satisfaction by Type of Travel")
+```
+
+By class
+```{r}
+ggplot(data = flight_df, aes(x = Class , fill = satisfaction)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() + ggtitle("Satisfaction by Class")
+```
+
+
+
+Let's create some categorical variables for age
+```{r}
+
+
+flight_df %>% ggplot(aes(x = Age, y= satisfaction, fill = satisfaction)) + geom_violin() + ggtitle("Age and Satisfaction")
+flight_df %>% ggplot(aes(x = Age, y= satisfaction, fill = satisfaction)) + geom_violin() + facet_wrap(~Gender) + ggtitle("Age and Sex")
+
+
+```
+
+
+Clustering
+```{r}
+
+flight_df %>% ggplot(aes(x = Age, y = Departure.Delay.in.Minutes, color = satisfaction)) + geom_point(size = .2) + facet_wrap(~satisfaction) + ggtitle("Age and Departure Delay")
+#flight_df %>% ggplot(aes(x = Age, y = Flight.Distance, color = satisfaction)) + geom_point(size = .2) + facet_wrap(~satisfaction)
+
+clust_dat <- flight_df %>% select(Age, Departure.Delay.in.Minutes)
+
+kmeans1 <- clust_dat %>% kmeans(4) #set number of clusters k
+
+kmeansclust <- clust_dat %>% mutate(cluster=as.factor(kmeans1$cluster)) 
+
+
 
 ```
 
 
 
 ```{r}
-#First Viz
-ggplot(data = flight_df, aes(x = Gender, fill = Class)) + geom_bar(position="dodge") +  geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + theme_bw() 
+
+kmeansclust %>% ggplot(aes(x = Age, y = Departure.Delay.in.Minutes, color = cluster)) + geom_point(size = .2) + ggtitle("Clustering Between Age and Departure Delay")
+```
+
+Doing some data analysis to to determine the clustering and the class they belong to
+```{r}
+join_cluster <- flight_df %>% select(satisfaction, Age, Departure.Delay.in.Minutes, Class) 
+
+temp <- inner_join(join_cluster, kmeansclust, by = c("Age", "Departure.Delay.in.Minutes")) %>% distinct() %>% group_by(cluster, Class) %>% summarize(satisfy = sum(satisfaction == "satisfied"), nosatisfy = sum(satisfaction == "dissatisfied")) %>% arrange(desc(nosatisfy))
+temp
 
 ```
 
 
+
+Analyzing our clustering soultion
+```{r}
+
+wss<-vector() #create empty vector
+
+#for k=1, 2, ... 10, compute WSS and save it in wss
+for(i in 1:10){
+  temp2 <- flight_df %>% select(Age,Departure.Delay.in.Minutes) %>% kmeans(i)
+  wss[i] <- temp2$tot.withinss # tot.withinss = WSS
+}
+
+wss
+ggplot()+geom_point(aes(x=1:10,y=wss))+geom_path(aes(x=1:10,y=wss))+
+  xlab("clusters")+scale_x_continuous(breaks=1:10) + ggtitle("WSS to find Optimal Clustern Amount")
+```
+
+
+
+More visuzlations about class type and flight distance
+```{r}
+
+
+
+ggplot(flight_df, aes(x = Class, y = Flight.Distance, fill = satisfaction)) + geom_bar(stat = "summary", fun=mean, position="dodge") + geom_errorbar(stat="summary", fun.data = mean_se) + facet_wrap(~satisfaction) + theme_bw() + ggtitle("Class Type and Flight Distance")
+
+
+
+
+```
+
+
+Leg room and type of travel
+```{r}
+
+
+flight_df %>% ggplot(aes(x = Leg.room.service, fill = Type.of.Travel)) + geom_bar(stat = "count") + facet_wrap(~satisfaction) + ggtitle("Leg Room by Type of Travel")
+
+
+
+```
+
+
+Gender overall distribution 
+```{r}
+flight_df %>% group_by(Gender) %>% summarize(male = sum(Gender == "Male"), female = sum(Gender == "Female"))
+data <- data.frame(
+  category=c("Male", "Female"),
+  count=c(63981, 65899)
+)
+
+# Compute percentages
+data$fraction <- data$count / sum(data$count)
+
+# Compute the cumulative percentages (top of each rectangle)
+data$ymax <- cumsum(data$fraction)
+
+# Compute the bottom of each rectangle
+data$ymin <- c(0, head(data$ymax, n=-1))
+
+# Compute label position
+data$labelPosition <- (data$ymax + data$ymin) / 2
+
+# Compute a good label
+data$label <- paste0(data$category, "\n value: ", data$count)
+
+# Make the plot
+ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=category)) +
+  geom_rect() +
+  geom_label( x=3.5, aes(y=labelPosition, label=label), size=6) +
+  scale_fill_brewer(palette=4) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) + theme_void() +
+  theme(legend.position = "none") + ggtitle("General Gender Distribution")
+
+```
+
+
+Leg room count by gender
+```{r}
+
+flight_df %>%group_by(`Leg.room.service`,Gender)%>%summarise(count=n())
+ggplot(flight_df, aes(x=Gender,y=`Leg.room.service`,fill=`Leg.room.service`))+geom_bar(stat="identity")
+
+ggplot(flight_df,aes(x=Gender,y=Leg.room.service,fill=satisfaction))+
+  geom_bar(stat="identity")+ facet_wrap(~Leg.room.service)  + ggtitle("Leg Room by Gender Count")
+
+
+
+
+flights_gender <- flight_df %>% mutate(gender = ifelse(Gender == "Male", 0, 1))
+
+
+
+df3 <- flights_gender %>% select_if(is.numeric) %>% na.omit()
+cormat3 <- df3 %>% cor()
+
+
+
+cormat3 %>% as.data.frame %>% rownames_to_column("var1")
+
+
+tidycor3 <- cormat3 %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+#Get every column except column 1
+  
+tidycor3 <- tidycor3 %>% filter(var2 == "gender")
+
+
+
+tidycor3 %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 2)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between Gender and Rating Variables")
+
+```
+
+Correlation map for male flyers
+```{r}
+
+
+flight_df_gender <- flight_df %>% mutate(Gender = ifelse(Gender == "Male", 0, 1)) %>% mutate(satisfaction = ifelse(satisfaction == "satisfied", 1, 0)) %>% filter(Gender == 0)
+head(flight_df_gender)
+
+
+df2 <- flight_df_gender %>% select_if(is.numeric) %>% na.omit()
+cormat2 <- df2 %>% cor()
+
+
+
+cormat2 %>% as.data.frame %>% rownames_to_column("var1")
+
+
+
+tidycor2 <- cormat2 %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+#Get every column except column 1
+  
+tidycor2 <- tidycor2 %>% filter(var2 == "satisfaction") %>% filter (var1=="Inflight.entertainment" | var1=="Leg.room.service"
+            | var1=="Online.boarding"
+            | var1=="Online.support"
+            | var1=="Seat.comfort"
+            | var1=="On.board.service"
+            | var1=="Inflight.wifi.service")
+
+tidycor2 %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 4)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between Male Flyers")
+
+
+```
+
+Correlation map for female flyers
 
 ```{r}
-flight_df %>% group_by(Class) %>% summarize(Average_distance = mean(Flight.Distance))%>% ggplot(aes(x = Class, y = Average_distance)) + geom_bar(stat = "identity") +  geom_text(stat="identity", aes(label=Average_distance), vjust=-0.2) + theme_bw()
+
+
+flight_df_gender <- flight_df %>% mutate(Gender = ifelse(Gender == "Male", 0, 1)) %>% mutate(satisfaction = ifelse(satisfaction == "satisfied", 1, 0)) %>% filter(Gender == 1)
+head(flight_df_gender)
+
+
+df2 <- flight_df_gender %>% select_if(is.numeric) %>% na.omit()
+cormat2 <- df2 %>% cor()
+
+
+
+cormat2 %>% as.data.frame %>% rownames_to_column("var1")
+
+
+tidycor2 <- cormat2 %>%
+  as.data.frame %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+#Get every column except column 1
+  
+tidycor2 <- tidycor2 %>% filter(var2 == "satisfaction") %>% filter (var1=="Inflight.entertainment" | var1=="Leg.room.service"
+            | var1=="Online.boarding"
+            | var1=="Online.support"
+            | var1=="Seat.comfort"
+            | var1=="On.board.service"
+            | var1=="Inflight.wifi.service")
+
+tidycor2 %>% ggplot(aes(var1, var2, fill=correlation)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low="red", mid="white", high = "blue") +
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 4)+ #overlays correlation values
+  theme(axis.text.x = element_text(angle = 90)) + #flips the x-axis labels
+  coord_fixed() + ggtitle("Correlation Between Female Flyers")
+
 ```
+
+
+
 
