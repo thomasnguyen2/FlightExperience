@@ -467,4 +467,90 @@ tidycor2 %>% ggplot(aes(var1, var2, fill=correlation)) +
 
 
 
+Categorizing Age
+```{r}
+flight_df$Age_group <- cut(flight_df$Age, 
+                        breaks = c(6, 12, 19, 39, 59, 85), 
+                        labels = c("Children","Teenager","Young Adult","Middle Age Adult",
+                                   "Senior Adult"))
+flight_df %>% ggplot(aes(x=Age_group)) + geom_bar(stat="count") + ggtitle("Age groupings Distribution")
+```
+
+
+Categorizing Age by intervals of 10
+```{r}
+flight_df$Age_group2 <- cut(flight_df$Age, 
+                        breaks = c(0, 9, 19, 29, 39, 49, 59, 69, 79, 89), 
+                        labels = c("below 10", "10s","20s","30s","40s", "50s", "60s", "70s", "80s"))
+
+flight_df %>% ggplot(aes(x=Age_group2)) + geom_bar(stat="count") + ggtitle("Age groupings by interval of 10s")
+```
+
+
+```{r}
+flight_df %>% 
+  ggplot(aes(x = Age_group, fill=satisfaction)) + 
+  geom_bar(position = "fill") + ylab("Satisfaction") + ggtitle("Satisfaction and Age Grouping")
+```
+
+
+Categorize departure and arrival delay variables
+```{r, fig.height=8, fig.width= 8}
+flight_df$DepartureDelay_group <- cut(flight_df$Departure.Delay.in.Minutes, 
+                        breaks = c(-1, 0, 10, 20, 30, 60, 120, 180, 1600), 
+                        labels = c("Punctual", "1~10min late", "11~20min late", "21~30min late", 
+                                   "31~60min late", "61~120min late", "121~180min late", 
+                                   "more than 180min late"))
+
+flight_df$ArrivalDelay_group <- cut(flight_df$Arrival.Delay.in.Minutes, 
+                        breaks = c(-1, 0, 10, 20, 30, 60, 120, 180, 1600), 
+                        labels = c("Punctual", "1~10min late", "11~20min late", "21~30min late", 
+                                   "31~60min late", "61~120min late", "121~180min late", 
+                                   "more than 180min late"))
+
+# change satisfaction variable to numeric variable(0,1)
+flight2 <- flight_df %>% mutate(satisfaction=ifelse(satisfaction=="satisfied",1,0))
+
+# Make a dataframe that shows satisfaction ratio grouped by age group and delay group
+flight_ratio <- flight2 %>% 
+  group_by(Age_group, DepartureDelay_group) %>% 
+  summarize(sat_ratio = sum(satisfaction)/n()) %>%
+  mutate(sat_ratio = round(sat_ratio, digit=2))
+
+flight_ratio %>% 
+  ggplot(aes(x=DepartureDelay_group, y=sat_ratio)) + 
+  geom_bar(stat='identity', fill = "skyblue") +
+  facet_wrap(~Age_group, ncol=5) + 
+  geom_text(aes(label = sat_ratio), vjust = -0.3, size=3.3) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  xlab("Departure Delay Time") + ylab("Satisfaction Ratio") +
+  ylim(0,1) + ggtitle("Departure Delay Time and Satisfacation Ratio")
+```
+
+
+```{r, fig.height=8, fig.width= 8}
+# change satisfaction variable to numeric variable(0,1)
+flight2 <- flight_df %>% mutate(sat=ifelse(satisfaction=="satisfied",1,0))
+
+# Make a dataframe that shows satisfaction ratio grouped by age group and delay group
+flight_ratio2 <- flight2 %>% 
+  group_by(Age_group, Ease.of.Online.booking) %>% 
+  summarize(sat_ratio = sum(sat)/n()) %>%
+  mutate(sat_ratio = round(sat_ratio, digit=2))
+## `summarise()` has grouped output by 'Age_group'. You can override using the
+## `.groups` argument.
+flight_ratio2 %>% 
+  ggplot(aes(x=Ease.of.Online.booking, y=sat_ratio)) + 
+  geom_bar(stat='identity', fill = "skyblue") +
+  facet_wrap(~Age_group, ncol=5) + 
+  geom_text(aes(label = sat_ratio), vjust = -0.3, size=3.3) +
+  theme_minimal() + 
+  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  ylab("Satisfaction Ratio") +
+  scale_x_continuous(name = "Ease in Online Booking", breaks = seq(0, 5, by = 1)) +
+  ylim(0,1) + ggtitle("Ease of Online Booking and Satisfaction Ratio")
+
+```
+
 
