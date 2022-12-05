@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
 This is our project for team 2, Flight Experience. The data contains information over 129,880 people who flew on different airplanes (with the same airline company though) and describes their plane ride experience. They rate their overall experience (from a scale of 1 to 5 where '0' stands for "Not Applicable" , '1' is "Least Satisfied" and '5' is "Most Satisfied") over a lot of different variables. There are also two columns that include data over their departure delay and arrival delay time. It's a classification problem, and we will look at the variables that make the best ride for a passenger and determine if they would have categorized their ride as 'satisfied' or ' 'unsatisfied' depending on their self-report. 
 
 Our goal: With this information, we will be able to help the company increase their retention rate with customers by being able to focus on what aspects of the flights that people enjoy the most. 
@@ -37,19 +36,19 @@ library(vtable)
 ```
 
 
-Reading in the excel file
+##Reading in the excel file
 ```{r}
 flight_df <- read.csv("Flight_Experience.csv") %>% data.frame()
 head(flight_df)
 ```
 
-Getting column information
+##Getting column information
 ```{r}
 flight_df %>% glimpse()
 ```
 
 
-Determining how many nulls there are
+##Determining how many nulls there are
 ```{r}
 
 nulls <- flight_df %>% summarize_all(function(x) sum(is.na(x)))
@@ -58,19 +57,32 @@ t(nulls)
 There are NA's in the dataset so lets clean it. Only column that has blanks is Arrival.Delay.in.Minutes
 
 
-Let's create a summary statstics table
+##Let's create a summary statstics table
 ```{r}
 num <- flight_df %>% select(where(is.numeric)) 
 st(num)
 ```
 
 
-Let's determine the overall satisfaction of the passengers
+##Let's determine the overall satisfaction of the passengers
 ```{r}
 
 flight_df %>% ggplot(aes(x = satisfaction, fill = satisfaction)) + geom_bar(position="stack", stat="count") + geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.2) + ggtitle("Overall Satisfaction Count")
 
 ```
+##Variables that have the highest rating for zero
+```{r}
+df <- flight_df[ , 8:21]
+
+df_rating <- df %>% summarise_all(function(x){sum(x==0)}) %>% 
+  gather(metric, zerocount) %>% filter(zerocount > 100)
+
+
+ggplot(df_rating,aes(x=metric,y=zerocount)) + geom_bar(stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("Rating Variable Counts with 0")
+```
+
+
+
 ```{r, fig.height=8, fig.width= 8}
 df <- flight_df %>% select_if(is.numeric) %>% na.omit()
 cormat <- df %>% cor()
@@ -552,5 +564,7 @@ flight_ratio2 %>%
   ylim(0,1) + ggtitle("Ease of Online Booking and Satisfaction Ratio")
 
 ```
+
+
 
 
