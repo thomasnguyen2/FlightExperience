@@ -1,4 +1,6 @@
-We have included the dataset, the R Markdown file, and a knitted version. 
+We have included the dataset, the R Markdown file, a knitted version, and the python modeling notebook. 
+
+The website is linked here: https://georgegu36.github.io/
 
 
 This is our project for team 2, Flight Experience. The data contains information over 129,880 people who flew on different airplanes (with the same airline company though) and describes their plane ride experience. They rate their overall experience (from a scale of 1 to 5 where '0' stands for "Not Applicable" , '1' is "Least Satisfied" and '5' is "Most Satisfied") over a lot of different variables. There are also two columns that include data over their departure delay and arrival delay time. It's a classification problem, and we will look at the variables that make the best ride for a passenger and determine if they would have categorized their ride as 'satisfied' or ' 'unsatisfied' depending on their self-report. 
